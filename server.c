@@ -64,7 +64,7 @@ void sem_decr(int SemID, int sem)
 
 int file_init(const char* filename)
 {
-     int br_fd = open(filename, O_RDWR | O_CREAT, 666);
+     int br_fd = open(filename, O_RDWR | O_CREAT, 0666);
 
      if( br_fd == -1 )
           err(1,"Error on file open!");
@@ -82,19 +82,74 @@ int file_init(const char* filename)
      return br_fd;
 }
 
+uint32_t read_accs(int br_fd, char acc)
+{
+
+	if( lseek(br_fd,0,SEEK_SET) == -1)
+		err(1,"Error on lseek!");
+
+	bool is_found = 0;
+	uint32_t acc_balance = -1;
+	for ( char c = 'A'; c <= 'H'; c++ )
+	{
+		if ( read(br_fd, &acc_balance, sizeof(uint32_t)) != sizeof(uint32_t) )
+			err(1,"Error on read!");
+
+		if( c == acc )
+		{
+			is_found = 1;
+			break;
+		}
+	}
+	if(is_found)
+	{
+		return acc_balance;
+	}
+	else return -1;
+}
+
+int write_acc_bal(int br_fd, char acc, uint32_t acc_balance)
+{
+	printf("%u",acc_balance);
+	if( lseek(br_fd,0,SEEK_SET) == -1)
+		err(1,"Error on lseek!");
+
+	uint32_t temp = acc_balance;
+
+	for ( char c = 'A'; c <= 'H'; c++ )
+	{
+		if( c == acc )
+		{
+			printf("asdasd");
+			if ( write(br_fd, &temp, sizeof(uint32_t)) != sizeof(uint32_t) )
+				err(1,"Error on write");
+
+			return 1;
+		}
+
+		if ( read(br_fd, &acc_balance, sizeof(uint32_t)) != sizeof(uint32_t) )
+			err(1,"Error on read!");
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
+	 if( argc != 2 ) 
+          err(1,"Bad arguments!(run like ./server [FILENAME])");
+
      key_t          ShmKEY;
      int            ShmID;
      struct SHMemory  *ShmPTR;
 
      int            SemID;
 
-     if( argc != 2 ) 
-          err(1,"Bad arguments!(run like ./server [FILENAME])");
-
      //file descriptor for bank records file
      int br_fd = file_init(argv[1]);
+    // write_acc_bal(br_fd,'C',100);
+     //printf("%d\n", read_accs(br_fd,'C'));
+     //printf("%d",read_br_fd(br_fd,'G'));
 
      //init shared memory
      ShmKEY = ftok(".", P_KEY);
@@ -106,22 +161,34 @@ int main(int argc, char *argv[])
      
 	//must check
 
-     ShmPTR->acc = 'a';
-
      printf("Server has attached the shared memory...\n");
-
-     //ShmPTR->status  = NOT_READY;
-     
-     //fill shared mem
-
-     // ShmPTR->status = FILLED;
 
      printf("Please start the client...\n");
 
-     //while (1)
-     //{
-     //     sleep(1);
-     //}
+     while(1)
+     {
+     
+     	//s2 wait
+     	sem_decr(SemID,S2);
+
+     	//write_acc_bal(br_fd, ShmPTR->acc, ShmPTR->req);
+     
+     	ShmPTR->req = read_accs(br_fd,ShmPTR->acc);
+
+     	//s3 signal
+     	sem_incr(SemID,S3);
+
+     	//s2 wait
+     	sem_decr(SemID,S2);
+
+     	write_acc_bal(br_fd, ShmPTR->acc, ShmPTR->req);
+     	ShmPTR->req = read_accs(br_fd,ShmPTR->acc);
+
+     	//s3 signal
+     	sem_incr(SemID,S3);
+
+     }
+
      printf("%d %d %d\n",SemID,ShmID,br_fd);
 
      sleep(75);
