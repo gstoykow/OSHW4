@@ -13,6 +13,7 @@
 #include <fcntl.h>
 
 #define P_KEY 2137894
+#define bool char
 #define S1 0 
 #define S2 1 
 #define S3 2
@@ -24,6 +25,5 @@ struct SHMemory
     uint32_t serve;
 };
 
-struct sembuf wait = { 0, -1, SEM_UNDO};
-struct sembuf signal = { 0, +1, SEM_UNDO}; 
-
+struct sembuf wait = { 0, -1, 0};
+struct sembuf signal = { 0, +1, 0}; 
