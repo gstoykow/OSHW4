@@ -16,7 +16,7 @@ int get_shm(key_t ShmKEY)
      if ( ShmID == -1 )
           err(1,"Error on shm require!"); 
           
-     printf("Server has received a shared memory...\n");
+     printf("Client has received shared memory...\n");
      return ShmID;
 }
 
@@ -38,8 +38,11 @@ void sem_decr(int SemID, int sem)
      semop(SemID, &wait, 1);
 }
 
-int  main()
+int  main(int argc, char* argv[])
 {
+	 if( argc != 2 ) 
+         err(1,"Bad arguments!(run like ./client [A-H])");
+
      key_t          ShmKEY;
      int            ShmID;
      struct SHMemory  *ShmPTR;
@@ -54,6 +57,33 @@ int  main()
      printf("%d %d\n", SemID, ShmID );
 
      ShmPTR = (struct SHMemory *) shmat(ShmID, NULL, 0);
+
+     //s1 wait
+     sem_decr(SemID,S1);
+
+     ShmPTR->acc = argv[1][0];
+   	 //printf("%c", ShmPTR->acc);
+     
+     //s2 signal
+     sem_incr(SemID,S2);
+
+     //s3 wait
+     sem_decr(SemID,S3);
+
+     printf("%d\n", ShmPTR->req );
+
+     scanf("%" SCNd16,&(ShmPTR->req));
+
+     //s2 signal
+     sem_incr(SemID,S2);
+
+     //s3 wait
+     sem_decr(SemID,S3);
+
+     printf("%d\n", ShmPTR->req );
+
+     //s1 signal
+     sem_incr(SemID,S1);
 
      clr_shm(ShmPTR);
  
